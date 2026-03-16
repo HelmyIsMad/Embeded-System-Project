@@ -181,19 +181,6 @@ loopAssembly:
 
     bl morse_code               @ Go to morse routine if pressed
     
-    @ Wait for button release with debounce
-wait_release:
-    ldr r0, =GPIOB_IDR
-    ldr r1, [r0]
-    ldr r2, =(1 << BUTTON_PIN)
-    ands r1, r1, r2
-    cmp r1, #0
-    beq wait_release            @ Button still pressed, keep waiting
-    
-    @ Debounce release
-    movs r0, #20
-    bl delay_ms
-    
     b loopAssembly              @ Repeat
 
 morse_code:
@@ -326,7 +313,7 @@ blink_element:
     push {r0, r1, r2, r3, r4, lr}
     
     @ Determine duration based on element type
-    movs r4, #DOT_DURATION
+    ldr r4, =DOT_DURATION
     cmp r0, #2                  @ Is it a dash?
     bne blink_dot_duration
     
@@ -361,7 +348,7 @@ blink_dot_duration:
     str r2, [r1]
     
     @ Inter-element gap (200ms)
-    movs r0, #ELEMENT_GAP
+    ldr r0, =ELEMENT_GAP
     bl delay_ms
     
     pop {r0, r1, r2, r3, r4, pc}
