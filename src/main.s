@@ -27,7 +27,7 @@
 .align 4
 
 @ --- Test String to Convert to Morse ---
-test_string: .asciz "HELLO"
+test_string: .asciz "H"
 
 @ --- Morse Code Pattern Lookup (1=dot, 2=dash, 0=end) ---
 morse_A:      .byte 1, 2, 0          @ .-
@@ -149,6 +149,19 @@ mainAssembly:
     ldr r2, =(1 << (BUTTON_PIN * 2))
     orrs r1, r1, r2             @ Set to 01 (Pull-up)
     str r1, [r0]
+    
+    @ --- Initialize LED and BUZZER to OFF ---
+    ldr r0, =GPIOA_ODR
+    ldr r1, [r0]
+    ldr r2, =(1 << LED_PIN)
+    bics r1, r1, r2
+    str r1, [r0]
+    
+    ldr r0, =GPIOB_ODR
+    ldr r1, [r0]
+    ldr r2, =(1 << BUZZER_PIN)
+    bics r1, r1, r2
+    str r1, [r0]
 
 loopAssembly:
     ldr r0, =GPIOB_IDR
@@ -221,16 +234,14 @@ morse_char_loop:
     
 morse_char_end:
     @ Add inter-character gap (400ms, plus the 200ms already waited)
-    ldr r0, =CHAR_GAP
-    bl delay_ms
+    @ TEMPORARILY DISABLED FOR DEBUGGING
     
     adds r4, r4, #1             @ Move to next character
     b morse_code_loop
     
 morse_word_gap:
     @ Add word gap (800ms extra, plus previous delays)
-    ldr r0, =WORD_GAP
-    bl delay_ms
+    @ TEMPORARILY DISABLED FOR DEBUGGING
     
     adds r4, r4, #1             @ Move past space character
     b morse_code_loop
@@ -261,6 +272,54 @@ delay_ms_done:
     pop {r1, r2}
     bx lr
 
+@ --- 1ms busy-wait (for use in PWM toggling) ---
+delay_1ms_busy:
+    push {r1}
+    ldr r1, =2000
+delay_1ms_busy_loop:
+    subs r1, r1, #1
+    bne delay_1ms_busy_loop
+    pop {r1}
+    bx lr
+
+@ --- Buzzer PWM 500Hz (1ms on, 1ms off) for r0 milliseconds ---
+@ Input: r0 = duration in milliseconds
+buzzer_pwm_ms:
+    push {r0, r1, r2, r3, r4}
+    
+    @ r4 holds the buzzer pin mask for efficiency
+    ldr r4, =(1 << BUZZER_PIN)
+    
+buzzer_pwm_loop:
+    cmp r0, #0
+    beq buzzer_pwm_done
+    
+    @ Toggle buzzer ON
+    ldr r1, =GPIOB_ODR
+    ldr r2, [r1]
+    orrs r2, r2, r4
+    str r2, [r1]
+    
+    @ Wait 1ms
+    bl delay_1ms_busy
+    
+    @ Toggle buzzer OFF
+    ldr r1, =GPIOB_ODR
+    ldr r2, [r1]
+    bics r2, r2, r4
+    str r2, [r1]
+    
+    @ Wait 1ms
+    bl delay_1ms_busy
+    
+    @ Decrement duration counter (each 1ms on + 1ms off = 2ms)
+    subs r0, r0, #2
+    bne buzzer_pwm_loop
+    
+buzzer_pwm_done:
+    pop {r0, r1, r2, r3, r4}
+    bx lr
+
 @ --- Output single morse element (dot or dash) ---
 @ Input: r0 = 1 (dot) or 2 (dash)
 blink_element:
@@ -276,30 +335,25 @@ blink_element:
 blink_dot_duration:
     @ r4 now contains duration (200 or 600)
     
-    @ Turn ON LED and BUZZER
+    @ Turn ON LED only (buzzer will be PWM controlled)
     ldr r1, =GPIOA_ODR
     ldr r2, [r1]
     ldr r3, =(1 << LED_PIN)
     orrs r2, r2, r3
     str r2, [r1]
     
-    ldr r1, =GPIOB_ODR
-    ldr r2, [r1]
-    ldr r3, =(1 << BUZZER_PIN)
-    orrs r2, r2, r3
-    str r2, [r1]
-    
-    @ Wait for duration
+    @ Start buzzer PWM for duration (buzzer_pwm_ms handles all toggling)
     mov r0, r4
-    bl delay_ms
+    bl buzzer_pwm_ms
     
-    @ Turn OFF LED and BUZZER
+    @ Turn OFF LED
     ldr r1, =GPIOA_ODR
     ldr r2, [r1]
     ldr r3, =(1 << LED_PIN)
     bics r2, r2, r3
     str r2, [r1]
     
+    @ Ensure buzzer is OFF at end
     ldr r1, =GPIOB_ODR
     ldr r2, [r1]
     ldr r3, =(1 << BUZZER_PIN)
