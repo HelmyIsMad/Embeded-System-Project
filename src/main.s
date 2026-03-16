@@ -27,7 +27,7 @@
 .align 4
 
 @ --- Test String to Convert to Morse ---
-test_string: .asciz "Hello"
+test_string: .asciz "Hello world"
 
 @ --- Morse Code Pattern Lookup (1=dot, 2=dash, 0=end) ---
 morse_A:      .byte 1, 2, 0          @ .-
@@ -220,15 +220,17 @@ morse_char_loop:
     b morse_char_loop
     
 morse_char_end:
-    @ Add inter-character gap (400ms, plus the 200ms already waited)
-    @ TEMPORARILY DISABLED FOR DEBUGGING
+    @ Add inter-character gap (400ms extra, plus 200ms element gap already done)
+    ldr r0, =CHAR_GAP
+    bl delay_ms
     
     adds r4, r4, #1             @ Move to next character
     b morse_code_loop
     
 morse_word_gap:
-    @ Add word gap (800ms extra, plus previous delays)
-    @ TEMPORARILY DISABLED FOR DEBUGGING
+    @ Add word gap (800ms extra, on top of the normal element gap)
+    ldr r0, =WORD_GAP
+    bl delay_ms
     
     adds r4, r4, #1             @ Move past space character
     b morse_code_loop
