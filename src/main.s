@@ -27,7 +27,7 @@
 .align 4
 
 @ --- Test String to Convert to Morse ---
-test_string: .asciz "H"
+test_string: .asciz "Hello"
 
 @ --- Morse Code Pattern Lookup (1=dot, 2=dash, 0=end) ---
 morse_A:      .byte 1, 2, 0          @ .-
@@ -272,7 +272,7 @@ delay_1ms_busy_loop:
 @ --- Buzzer PWM 500Hz (1ms on, 1ms off) for r0 milliseconds ---
 @ Input: r0 = duration in milliseconds
 buzzer_pwm_ms:
-    push {r0, r1, r2, r3, r4}
+    push {r0, r1, r2, r3, r4, lr}
     
     @ r4 holds the buzzer pin mask for efficiency
     ldr r4, =(1 << BUZZER_PIN)
@@ -304,8 +304,7 @@ buzzer_pwm_loop:
     bne buzzer_pwm_loop
     
 buzzer_pwm_done:
-    pop {r0, r1, r2, r3, r4}
-    bx lr
+    pop {r0, r1, r2, r3, r4, pc}
 
 @ --- Output single morse element (dot or dash) ---
 @ Input: r0 = 1 (dot) or 2 (dash)
