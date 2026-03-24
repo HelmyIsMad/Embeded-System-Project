@@ -1,19 +1,20 @@
 .syntax unified
-.cpu cortex-m0plus
+.cpu cortex-m4
 .thumb
+.fpu fpv4-sp-d16
 .section .text
 .align 2
 
 @ Register Addresses
-.equ RCC_IOPENR,  0x4002102C
+.equ RCC_AHB1ENR,  0x40023830
 
-.equ GPIOA_MODER,  0x50000000
-.equ GPIOA_BSRR,   0x50000018
+.equ GPIOA_MODER,  0x40020000
+.equ GPIOA_BSRR,   0x40020018
 
-.equ GPIOB_MODER,  0x50000400
-.equ GPIOB_PUPDR,  0x5000040C
-.equ GPIOB_IDR,    0x50000410
-.equ GPIOB_BSRR,   0x50000418
+.equ GPIOB_MODER,  0x40020400
+.equ GPIOB_PUPDR,  0x4002040C
+.equ GPIOB_IDR,    0x40020410
+.equ GPIOB_BSRR,   0x40020418
 
 @ Constants
 .equ PA12_LED_PIN_BIT, (1 << 12)          @ PA12
@@ -74,8 +75,6 @@ morse_0: .asciz "-----"
 
 .section .data
 .align 4
-.section .data
-.align 4
 morse_table:
     .word morse_a, morse_b, morse_c, morse_d  @ A-D
     .word morse_e, morse_f, morse_g, morse_h  @ E-H
@@ -98,14 +97,14 @@ mainAssembly:
 @ setup function
 setup:
     @ 1. Enable Clock for GPIOA
-    LDR r0, =RCC_IOPENR
+    LDR r0, =RCC_AHB1ENR
     LDR r1, [r0]
     MOVS r2, #1
     ORRS r1, r1, r2
     STR r1, [r0]
     
     @ 2. Enable Clock for GPIOB
-    LDR r0, =RCC_IOPENR
+    LDR r0, =RCC_AHB1ENR
     LDR r1, [r0]
     MOVS r2, #2
     ORRS r1, r1, r2
@@ -262,6 +261,7 @@ delay_short_loop1:
     STR r5, [r4]
 
     LDR r7, =#1000
+    
 delay_short_loop2:
     SUBS r7, r7, #1
     cmp r7, #0
